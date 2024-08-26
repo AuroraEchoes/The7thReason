@@ -6,7 +6,7 @@ struct Data {}
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
-const ICON_LINK: &str = "https://i.imgur.com/J6t2fBE.png";
+const ICON_LINK: &str = "https://i.imgur.com/mPXUvUZ.png";
 
 #[poise::command(slash_command)]
 async fn confirm_event(
