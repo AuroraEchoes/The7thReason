@@ -1,0 +1,11 @@
+[package]
+name = "the_7th_reason"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.38"
+dotenv = "0.15.0"
+poise = "0.6.1"
+serenity = "0.12.2"
+tokio = { version = "1.39.3", features = ["macros", "rt-multi-thread"] }
