@@ -1,5 +1,5 @@
-use chrono::Datelike;
-use poise::serenity_prelude as serenity;
+use chrono::{Datelike, TimeZone};
+use poise::{serenity_prelude as serenity, CreateReply};
 use ::serenity::all::{Color, Colour, CreateEmbed, CreateEmbedAuthor, CreateMessage, ReactionType};
 
 struct Data {}
@@ -28,10 +28,9 @@ async fn confirm_event(
         )
         .title(format!("**{event_type} Confirmation**"))
         .description(format!(":calendar: **Day**: {day}\n\n:alarm_clock: **Time**: {time}\n\n:busts_in_silhouette: **Who**: {opponent}\n\n*React with :white_check_mark: if you can make it*\n\n[ <@&1244624494731984906> ]"));
-    let message = ctx
-        .channel_id()
-        .send_message(ctx.http(), CreateMessage::new().embed(embed))
-        .await?;
+    let reply_handle = ctx
+        .send(CreateReply::default().embed(embed)).await?;
+    let message = reply_handle.message().await?;
     message.react(ctx.http(), ReactionType::Unicode("✅".to_string())).await?;
     message.react(ctx.http(), ReactionType::Unicode("❌".to_string())).await?;
 
@@ -56,10 +55,9 @@ async fn announce_event(
         )
         .title(format!("**{event_type} Announcment**"))
         .description(format!(":calendar: **Day**: {day}\n\n:busts_in_silhouette: **Who**: {opponent}\n\n*React below with time availability*\n\n[ <@&1244624494731984906> ]"));
-    let message = ctx
-        .channel_id()
-        .send_message(ctx.http(), CreateMessage::new().embed(embed))
-        .await?;
+    let reply_handle = ctx
+        .send(CreateReply::default().embed(embed)).await?;
+    let message = reply_handle.message().await?;
 
     message.react(ctx.http(), ReactionType::Unicode("6️⃣".to_string())).await?;
     message.react(ctx.http(), ReactionType::Unicode("7️⃣".to_string())).await?;
@@ -75,11 +73,13 @@ async fn poll_availability(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
     let icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
-    let mut curr_day = chrono::offset::Local::now().date_naive().weekday();
+    let offset = chrono::offset::FixedOffset::east_opt(3600 * 10).unwrap();
+    let timezone: chrono::DateTime<chrono::FixedOffset> = chrono::DateTime::from_naive_utc_and_offset(chrono::prelude::Utc::now().naive_utc(), offset);
+    let mut curr_day = timezone.weekday();
     let mut str_build = "".to_string();
 
     for i in 0..7 {
-        str_build += &(icons[i].to_string() + " → " + &curr_day.to_string() + "\n\n");
+        str_build += &(icons[i].to_string() + " → " + &curr_day.to_string() + "\n");
         curr_day = curr_day.succ();
     }
 
@@ -91,10 +91,11 @@ async fn poll_availability(
         )
         .title(format!("**Availability Poll**"))
         .description(format!("*Polling availability for the next week.*\nReact with **all** of the days during which you are availabile **for at least an hour** at some point between 6pm – 10pm.\n\n{str_build}\n[ <@&1244624494731984906> ]"));
-    let message = ctx
-        .channel_id()
-        .send_message(ctx.http(), CreateMessage::new().embed(embed))
-        .await?;
+
+    let reply_handle = ctx
+        .send(CreateReply::default().embed(embed)).await?;
+    let message = reply_handle.message().await?;
+
     for icon in icons {
         message.react(ctx.http(), ReactionType::Unicode(icon.to_string())).await?;
     }
