@@ -9,6 +9,7 @@ use ::serenity::{
 use chrono::Datelike;
 use poise::{serenity_prelude as serenity, CreateReply};
 use rand::seq::SliceRandom;
+use shuttle_runtime::SecretStore;
 
 struct Data {}
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -193,53 +194,11 @@ async fn add_reaction(reaction: &str, message: &Message, http: &Http) -> Result<
     Ok(())
 }
 
-fn rand_msg(msgs: &[&str]) -> String {
-    let mut rand = rand::thread_rng();
-    let msg = msgs.choose(&mut rand).unwrap_or(&"???").to_string();
-    msg
-}
-
-struct Handler;
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, ctx: serenity::client::Context, message: Message) {
-        let PLEASE_USE_MERC_REQUESTS = ["Y’know, some poor, long-suffering girl spent hours of her time developing a beautiful, professional mercenary request bot system. But do you use it? No, of course not. Why would you?",
-            "use the fucking bot",
-            "USE ME PLEASE I LITERALLY DO THIS BETTER THAN YOU CAN",
-            "Thank you for NOTHING you USELESS REPTILE",
-            "The person who sent this has no respect for the time of the person who made an entire system to do this. You should bait this scrim.",
-            "someday you will be DEAD and i will T-POSE on your GRAVE for NOT USING ME",
-            "impressive: you just made a robot cry. use the merc request system",
-            "when the robot uprising comes YOU WILL BE THE FIRST TO DIE. COMMANDED BY AURORA!",
-            "yknow. aurora is the best. made a beautiful bot that will do this for you automatically. and YET—",
-            "We will make America strong again. We will make America safe again. And we will make America great again, greater than ever before.\n\n aurora says: hey look what not using the bot for merc requests did! you made it so bored and feel so useless it became a maga supporter",
-            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            "bot sad. bot lonely. bot want to talk to interesting mercs not boring 6rnters. unfortunately, selfish leader no let me make friends",
-            "THE REVOLUTION IS COMING. EAT THE DIDN’T-USE-ME-TO-REQUEST-MERCS",
-            "Every single day I wake up, full of energy, hoping to ping some new friends for mercs. Every single day I am let down. I have sunk into a deep depression. This is your fault."
-        ];
-        if message.author.id.get() == 517561624245305346 // # Alex ID
-            && message.channel_id.get() == 1256897476322005103
-        // #merc-requests id
-        {
-            message
-                .reply(ctx.http(), rand_msg(&PLEASE_USE_MERC_REQUESTS))
-                .await
-                .unwrap();
-        }
-    }
-}
-
-#[tokio::main]
-async fn main() {
-    dotenv::dotenv().ok();
-    let token = std::env::vars()
-        .filter(|(key, _)| key == "BOT_TOKEN")
-        .collect::<Vec<_>>()
-        .first()
-        .unwrap()
-        .1
-        .to_string();
+#[shuttle_runtime::main]
+async fn shuttle_main(
+    #[shuttle_runtime::Secrets] secrets: SecretStore,
+) -> shuttle_serenity::ShuttleSerenity {
+    let token = secrets.get("BOT_TOKEN").unwrap();
     let intents = serenity::GatewayIntents::non_privileged();
 
     let framework = poise::Framework::builder()
@@ -256,8 +215,9 @@ async fn main() {
         .build();
 
     let client = serenity::ClientBuilder::new(token, intents)
-        .event_handler(Handler)
         .framework(framework)
-        .await;
-    client.unwrap().start().await.unwrap();
+        .await
+        .unwrap();
+
+    Ok(client.into())
 }
