@@ -17,6 +17,11 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 const ICON_LINK: &str = "https://i.imgur.com/mPXUvUZ.png";
 
+const DEMOMAN_ICON: &str = "<:demoman:1333727378370723851>";
+const SCOUT_ICON: &str = "<:scout:1333727211815174235>";
+const SOLDIER_ICON: &str = "<:soldier:1333727354505265235>";
+const MEDIC_ICON: &str = "<:medic:1333727312583331874>";
+
 #[poise::command(slash_command)]
 async fn confirm_event(
     ctx: Context<'_>,
@@ -25,20 +30,47 @@ async fn confirm_event(
     #[description = "Time"] time: Option<String>,
     #[description = "Opponent"] opponent: Option<String>,
     #[description = "Maps"] maps: Option<String>,
+    #[description = "Combo Scout"] combo_scout: Option<String>,
+    #[description = "Flank Scout"] flank_scout: Option<String>,
+    #[description = "Pocket Soldier"] pocket_soldier: Option<String>,
+    #[description = "Roamer Soldier"] roamer_soldier: Option<String>,
+    #[description = "Demoman"] demoman: Option<String>,
+    #[description = "Medic"] medic: Option<String>,
 ) -> Result<(), Error> {
     let event_type = event_type.unwrap_or_else(|| "[Event type not specified]".to_string());
     let day = day.unwrap_or_else(|| "[Day not specified]".to_string());
     let time = time.unwrap_or_else(|| "[Time not specified]".to_string());
     let opponent = opponent.unwrap_or_else(|| "[Opponent not specified]".to_string());
     let maps = maps.unwrap_or_else(|| "[Maps not specified]".to_string());
+    let combo_scout = combo_scout.unwrap_or("[Combo Scout not listed]".to_string());
+    let flank_scout = flank_scout.unwrap_or("[Flank Scout not listed]".to_string());
+    let pocket_soldier = pocket_soldier.unwrap_or("[Pocket Soldier not listed]".to_string());
+    let roamer_soldier = roamer_soldier.unwrap_or("[Roamer Soldier not listed]".to_string());
+    let demoman = demoman.unwrap_or("[Demoman not listed]".to_string());
+    let medic = medic.unwrap_or("[Medic not listed]".to_string());
+
     ctx.send(
         CreateReply::default()
             .content("Confirming event")
             .ephemeral(true),
     )
     .await?;
-    let embed = default_embed().title(format!("**{event_type} Confirmation**"))
-        .description(format!(":calendar: **Day**: {day}\n\n:alarm_clock: **Time**: {time}\n\n:busts_in_silhouette: **Who**: {opponent}\n\n:map: **Maps**: {maps}\n\n*React with :white_check_mark: if you can make it*"));
+    let embed = default_embed()
+        .title(format!("**{event_type} Confirmation**"))
+        .description(format!(
+            ":calendar: **Day**: {day}\n
+            :alarm_clock: **Time**: {time}\n
+            :busts_in_silhouette: **Who**: {opponent}\n
+            :map: **Maps**: {maps}\n
+            :gun: **Roster**:
+            > {SCOUT_ICON} Combo Scout: {combo_scout}
+            > {SCOUT_ICON} Flank Scout: {flank_scout}
+            > {SOLDIER_ICON} Pocket Soldier: {pocket_soldier}
+            > {SOLDIER_ICON} Roamer Soldier: {roamer_soldier}
+            > {DEMOMAN_ICON} Demoman: {demoman}
+            > {MEDIC_ICON} Medic: {medic}\n
+            *React with :white_check_mark: if you can make it*"
+        ));
     let msg_handle = ctx
         .channel_id()
         .send_message(
