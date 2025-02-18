@@ -48,6 +48,11 @@ async fn confirm_event(
     let roamer_soldier = roamer_soldier.unwrap_or("[Roamer Soldier not listed]".to_string());
     let demoman = demoman.unwrap_or("[Demoman not listed]".to_string());
     let medic = medic.unwrap_or("[Medic not listed]".to_string());
+    let demoman_title = if demoman.to_lowercase().contains("aurora") {
+        "Demoma’am".to_string()
+    } else {
+        "Demoman".to_string()
+    };
 
     ctx.send(
         CreateReply::default()
@@ -59,17 +64,17 @@ async fn confirm_event(
         .title(format!("**{event_type} Confirmation**"))
         .description(format!(
             ":calendar: **Day**: {day}\n
-            :alarm_clock: **Time**: {time}\n
-            :busts_in_silhouette: **Who**: {opponent}\n
-            :map: **Maps**: {maps}\n
-            :gun: **Roster**:
-            > {SCOUT_ICON} Combo Scout: {combo_scout}
-            > {SCOUT_ICON} Flank Scout: {flank_scout}
-            > {SOLDIER_ICON} Pocket Soldier: {pocket_soldier}
-            > {SOLDIER_ICON} Roamer Soldier: {roamer_soldier}
-            > {DEMOMAN_ICON} Demoman: {demoman}
-            > {MEDIC_ICON} Medic: {medic}\n
-            *React with :white_check_mark: if you can make it*"
+:alarm_clock: **Time**: {time}\n
+:busts_in_silhouette: **Who**: {opponent}\n
+:map: **Maps**: {maps}\n
+:gun: **Roster**:
+> {SCOUT_ICON} Combo Scout: {combo_scout}
+> {SCOUT_ICON} Flank Scout: {flank_scout}
+> {SOLDIER_ICON} Pocket Soldier: {pocket_soldier}
+> {SOLDIER_ICON} Roamer Soldier: {roamer_soldier}
+> {DEMOMAN_ICON} {demoman_title}: {demoman}
+> {MEDIC_ICON} Medic: {medic}\n
+*React with :white_check_mark: if you can make it*"
         ));
     let msg_handle = ctx
         .channel_id()
