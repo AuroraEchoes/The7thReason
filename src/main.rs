@@ -127,14 +127,19 @@ async fn announce_event(
 }
 
 #[poise::command(slash_command)]
-async fn poll_availability(ctx: Context<'_>) -> Result<(), Error> {
+async fn poll_availability(
+    ctx: Context<'_>,
+    #[description = "Week Dates"] week_dates: Option<String>,
+) -> Result<(), Error> {
+    let week_dates = week_dates.unwrap_or("this week".to_string());
     let offset = chrono::offset::FixedOffset::east_opt(3600 * 10).unwrap();
     let timezone: chrono::DateTime<chrono::FixedOffset> =
         chrono::DateTime::from_naive_utc_and_offset(
             chrono::prelude::Utc::now().naive_utc(),
             offset,
         );
-    let mut curr_day = timezone.weekday();
+
+    let mut curr_day = timezone.weekday().succ();
     let mut str_build = "".to_string();
 
     let icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "❌"];
@@ -153,8 +158,8 @@ async fn poll_availability(ctx: Context<'_>) -> Result<(), Error> {
     .await?;
 
     let embed = default_embed()
-        .title("**Availability Poll**".to_string())
-        .description(format!("*Polling availability for the next week.*\nReact with **all** of the days during which you are availabile **for at least an hour** at some point between 6pm – 10pm.\n\n{str_build}\n\n"));
+        .title(format!("**Availability Poll** ({week_dates})"))
+        .description(format!("*Polling availability for the {week_dates}.*\nReact with **all** of the days during which you are availabile **for at least an hour** at some point between 6pm – 10pm.\n\n{str_build}\n\n"));
 
     let msg_handle = ctx
         .channel_id()
