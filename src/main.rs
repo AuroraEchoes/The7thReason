@@ -1,14 +1,10 @@
-use ::serenity::{
-    all::{
-        CacheHttp, Colour, CreateEmbed, CreateEmbedAuthor, CreateMessage, EventHandler, Http,
+use chrono_tz::Australia::Sydney;
+use ::serenity::all::{
+        Colour, CreateEmbed, CreateEmbedAuthor, CreateMessage, Http,
         Message, ReactionType,
-    },
-    async_trait,
-    prelude::*,
-};
-use chrono::Datelike;
+    };
+use chrono::{DateTime, Days, NaiveDateTime, NaiveTime, TimeDelta, TimeZone};
 use poise::{serenity_prelude as serenity, CreateReply};
-use rand::seq::SliceRandom;
 use shuttle_runtime::SecretStore;
 
 struct Data {}
@@ -129,87 +125,75 @@ async fn announce_event(
 #[poise::command(slash_command)]
 async fn poll_availability(
     ctx: Context<'_>,
-    #[description = "Week Dates"] week_dates: Option<String>,
+    #[description = "Start Date (YYYY-MM-DD)"] start_date: Option<String>,
 ) -> Result<(), Error> {
-    let week_dates = week_dates.unwrap_or("this week".to_string());
-    let offset = chrono::offset::FixedOffset::east_opt(3600 * 10).unwrap();
-    let timezone: chrono::DateTime<chrono::FixedOffset> =
-        chrono::DateTime::from_naive_utc_and_offset(
-            chrono::prelude::Utc::now().naive_utc(),
-            offset,
-        );
-
-    let mut curr_day = timezone.weekday().succ();
-    let mut str_build = "".to_string();
-
+    let naive_date = parse_date(&start_date.unwrap_or_default());
     let icons = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "❌"];
 
-    (0..7).for_each(|i| {
-        str_build += &(icons[i].to_string() + " → " + &curr_day.to_string() + "\n");
-        curr_day = curr_day.succ();
-    });
-    str_build += ":x: →  No Availability\n";
+    if let Ok(naive_date) = naive_date {
+        // let mut tz_date = chrono::DateTime::from_naive_utc_and_offset(naive_date.into(), sydney);
+        let date_time = NaiveDateTime::new(naive_date, NaiveTime::from_hms_opt(12, 0, 0).unwrap());
+        let mut tz_date = Sydney.from_local_datetime(&date_time).unwrap();
+        let mut str_build = "".to_string();
 
-    ctx.send(
-        CreateReply::default()
-            .content("Creating availability poll")
-            .ephemeral(true),
-    )
-    .await?;
+        (0..7).for_each(|i| {
+            let timestamp = tz_date.timestamp();
+            str_build += &(icons[i].to_string() + " → " + format!("<t:{timestamp}:D>").as_str() + "\n");
+            tz_date = tz_date.checked_add_days(Days::new(1)).unwrap()
+        });
 
-    let embed = default_embed()
-        .title(format!("**Availability Poll** ({week_dates})"))
-        .description(format!("*Polling availability for the {week_dates}.*\nReact with **all** of the days during which you are availabile **for at least an hour** at some point between 6pm – 10pm.\n\n{str_build}\n\n"));
-
-    let msg_handle = ctx
-        .channel_id()
-        .send_message(
-            ctx.http(),
-            CreateMessage::default()
-                .embed(embed)
-                .content("[ <@&1244624494731984906> ]"),
+        ctx.send(
+            CreateReply::default()
+                .content("Creating availability poll")
+                .ephemeral(true),
         )
         .await?;
 
-    add_reactions(&icons, &msg_handle, ctx.http()).await?;
+        let embed = default_embed()
+            .title(format!("**Availability Poll**"))
+            .description(format!("*Polling availability.*\nReact with **all** of the days during which you are availabile **for at least an hour** at some point between 6pm – 10pm.\n\n{str_build}\n\n"));
 
+        let msg_handle = ctx
+            .channel_id()
+            .send_message(
+                ctx.http(),
+                CreateMessage::default()
+                    .embed(embed)
+                    .content("[ <@&1244624494731984906> ]"),
+            )
+        .await?;
+
+        add_reactions(&icons, &msg_handle, ctx.http()).await?;
+
+    }
+    else {
+        ctx.send(
+            CreateReply::default()
+                .content("Invalid date. Please send a valid date in the format YYYY-MM-DD.")
+                .ephemeral(true),
+        ).await?;
+    }
+   
     Ok(())
 }
 
-#[poise::command(slash_command)]
-async fn request_merc(
-    ctx: Context<'_>,
-    #[description = "Day"] day: Option<String>,
-    #[description = "Time"] time: Option<String>,
-    #[description = "Role"] role: Option<String>,
-    #[description = "Opponent"] opponent: Option<String>,
-) -> Result<(), Error> {
-    let day = day.unwrap_or_else(|| "[Day not specified]".to_string());
-    let time = time.unwrap_or_else(|| "[Time not specified]".to_string());
-    let role = role.unwrap_or_else(|| "[Role not specified]".to_string());
-    let opponent = opponent.unwrap_or_else(|| "[Opponent not specified]".to_string());
-    ctx.send(
-        CreateReply::default()
-            .content("Requesting merc")
-            .ephemeral(true),
-    )
-    .await?;
-
-    let embed = default_embed().title("**Mercenary Request**".to_string())
-        .description(format!(":performing_arts: **Role**: {role}\n\n:calendar: **Day**: {day}\n\n:alarm_clock: **Time**: {time}\n\n:busts_in_silhouette: **Who**: {opponent}\n\n*React with :white_check_mark: if you can make it*"));
-    let msg_handle = ctx
-        .channel_id()
-        .send_message(
-            ctx.http(),
-            CreateMessage::default()
-                .embed(embed)
-                .content("[ <@&1245310052294987846> ]"),
-        )
-        .await?;
-    let reactions = ["✅", "❌"];
-    add_reactions(&reactions, &msg_handle, ctx.http()).await?;
-
-    Ok(())
+fn parse_date(input: &String) -> Result<chrono::NaiveDate, ()> {
+    let ymd = input
+        .split("-")
+        .filter_map(|s| match s.parse::<u32>() {
+            Err(e) => None,
+            Ok(i) => Some(i)
+        })
+        .collect::<Vec<_>>();
+    if ymd.len() != 3 {
+        return Err(())
+    }
+    let naive_date = chrono::NaiveDate::from_ymd_opt(ymd[0] as i32, ymd[1], ymd[2]);
+    if let Some(naive_date) = naive_date {
+        return Ok(naive_date)
+    } else {
+        return Err(())
+    }
 }
 
 fn default_embed() -> CreateEmbed {

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.38"
+chrono-tz = "0.10.1"
 dotenv = "0.15.0"
 poise = "0.6.1"
 rand = "0.8.5"
